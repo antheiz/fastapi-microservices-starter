@@ -1,28 +1,22 @@
-from typing import Annotated
-
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.security import ALGORITHM
 from app.crud.users import crud_user
-from app.schemas.token import TokenPayload
 from app.models.users import User
-
+from app.schemas.token import TokenPayload
 
 oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
 
-def get_session():
-    session = SessionLocal()
-    try:
+async def get_session():
+    async with SessionLocal() as session:
         yield session
-    finally:
-        session.close()
 
 
 def get_token_data(token: str = Depends(oauth2)) -> TokenPayload:
@@ -35,11 +29,22 @@ def get_token_data(token: str = Depends(oauth2)) -> TokenPayload:
     return token_data
 
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(get_token_data),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
-    user = crud_user.get(session, user_id=token.user_id)
+    user = await crud_user.get(session, id=token.user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+def get_current_superuser(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403, detail="The user doesn't have enough privileges"
+        )
+    return current_user
+
+
+on_superuser = get_current_superuser

@@ -1,8 +1,6 @@
 from app.crud.base import CRUDBase
-from app.crud.helpers import create_customer
 from app.models.users import User
 from app.schemas.user import UserInDB, UserUpdateDB
 
-
 CRUDUser = CRUDBase[User, UserInDB, UserUpdateDB]
-crud_user = CRUDUser(User, post_create=create_customer)
+crud_user = CRUDUser(User)

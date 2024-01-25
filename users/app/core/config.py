@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
-from pydantic import AnyHttpUrl, PostgresDsn, SecretStr, validator
+
+from pydantic import AnyHttpUrl, EmailStr, SecretStr, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,22 +18,23 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-    POSTGRES_SERVER: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
     POSTGRES_DB: str
-    DATABASE_URI: Optional[PostgresDsn] = None
+    POSTGRES_HOST: str
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: SecretStr
+    POSTGRES_URI: Optional[str] = None
 
-    @validator("DATABASE_URI", pre=True)
-    def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+    @validator("POSTGRES_URI", pre=True)
+    def validate_postgres_conn(cls, v: Optional[str], values: Dict[str, Any]) -> str:
         if isinstance(v, str):
             return v
-        return PostgresDsn.build(
-            scheme="postgresql",
-            username=values.get("POSTGRES_USER"),
-            password=values.get("POSTGRES_PASSWORD"),
-            host=values.get("POSTGRES_SERVER"),
-            path=values.get("POSTGRES_DB"),
+        password: SecretStr = values.get("POSTGRES_PASSWORD", SecretStr(""))
+        return "{scheme}://{user}:{password}@{host}/{db}".format(
+            scheme="postgresql+asyncpg",
+            user=values.get("POSTGRES_USER"),
+            password=password.get_secret_value(),
+            host=values.get("POSTGRES_HOST"),
+            db=values.get("POSTGRES_DB"),
         )
 
     SECRET_KEY: SecretStr

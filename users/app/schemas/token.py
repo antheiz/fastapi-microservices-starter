@@ -1,7 +1,6 @@
 from typing import Literal, Optional
 
 from pydantic import BaseModel
-from uuid import UUID
 
 
 class Token(BaseModel):
@@ -10,4 +9,4 @@ class Token(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    user_id: Optional[UUID]
+    user_id: Optional[int]
